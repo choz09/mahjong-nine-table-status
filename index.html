@@ -234,16 +234,23 @@
       var d = new Date();
       var hh = String(d.getHours()).padStart(2, '0');
       var mm = String(d.getMinutes()).padStart(2, '0');
+      var filename = '麻雀ナイン_卓状況_' + hh + mm + '.png';
+      var file = new File([blob], filename, {type: 'image/png'});
+
+      // iOS Safari等: 共有シート経由なら「写真に保存」が選べる
+      if (navigator.canShare && navigator.canShare({files: [file]})) {
+        return navigator.share({files: [file]}).then(function(){
+          saveStatus.textContent = '共有シートから「写真に保存」を選んでください';
+        });
+      }
+
+      // 共有シート非対応環境: 新しいタブで画像を開き、長押しで保存してもらう
       var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = '麻雀ナイン_卓状況_' + hh + mm + '.png';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
-      saveStatus.textContent = '保存しました';
-    }).catch(function(){
+      window.open(url, '_blank');
+      saveStatus.textContent = '開いた画像を長押しして保存してください';
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    }).catch(function(err){
+      if (err && err.name === 'AbortError') { saveStatus.textContent = ''; return; }
       saveStatus.textContent = '保存できませんでした。スクリーンショットをご利用ください。';
     }).finally(function(){
       saveBtn.disabled = false;
