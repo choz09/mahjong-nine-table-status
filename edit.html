@@ -341,16 +341,24 @@
       var mm = String(d.getMinutes()).padStart(2, '0');
       var filename = '麻雀ナイン_卓状況_' + hh + mm + '.png';
       var file = new File([blob], filename, {type: 'image/png'});
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-      if (navigator.canShare && navigator.canShare({files: [file]})) {
+      // iOSはダウンロードだとファイルアプリ行きになるため共有シート経由にする。
+      // それ以外(PC・Android等)は共有シートに「保存」相当の項目がないことがあるため、通常のダウンロードにする。
+      if (isIOS && navigator.canShare && navigator.canShare({files: [file]})) {
         return navigator.share({files: [file]}).then(function(){
           saveStatus.textContent = '共有シートから「写真に保存」を選んでください';
         });
       }
       var url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      saveStatus.textContent = '開いた画像を長押しして保存してください';
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      saveStatus.textContent = '保存しました';
     }).catch(function(err){
       if (err && err.name === 'AbortError') { saveStatus.textContent = ''; return; }
       saveStatus.textContent = '保存できませんでした。スクリーンショットをご利用ください。';
