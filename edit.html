@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>麻雀ナイン 空卓ステータス</title>
+<title>麻雀ナイン 空卓ステータス(サイズ編集用)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Work+Sans:wght@400;500;600;700&display=swap">
 <style>
@@ -143,6 +143,10 @@
   <p class="hint">卓をタップすると状態が切り替わります(空卓 → フリー → 貸卓 → 空卓)。集計と更新時刻は自動で反映されます。下の「画像として保存」でカード部分だけを画像として保存できます。</p>
 
   <div class="controls">
+    <div class="control-row">
+      <label for="scaleSlider">卓の大きさ</label>
+      <input type="range" id="scaleSlider" min="80" max="130" value="100">
+    </div>
     <button class="save-btn" id="saveBtn">画像として保存</button>
     <p class="save-status" id="saveStatus"></p>
     <button class="reset-btn" id="resetBtn">全卓を空卓にリセット</button>
@@ -255,6 +259,11 @@
     }).finally(function(){
       saveBtn.disabled = false;
     });
+  });
+
+  var scaleSlider = document.getElementById('scaleSlider');
+  scaleSlider.addEventListener('input', function(){
+    document.documentElement.style.setProperty('--scale', (scaleSlider.value / 100));
   });
 
   render();
