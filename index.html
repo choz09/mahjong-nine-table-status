@@ -13,6 +13,7 @@
     --gold:#cdaf6d; --gold-soft:rgba(205,175,109,.14);
     --green:#3fb673; --green-soft:rgba(63,182,115,.14);
     --red:#e0574f; --red-soft:rgba(224,87,79,.14);
+    --scale:1;
   }
   *{box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'Zen Kaku Gothic New',sans-serif;margin:0;
@@ -27,42 +28,45 @@
   /* ---------- the card (screenshot target) ---------- */
   #card{background:var(--panel);border:1px solid var(--border);border-radius:20px;overflow:hidden;
     box-shadow:0 24px 60px -20px rgba(0,0,0,.6);}
-  .card-head{padding:22px 22px 18px;border-bottom:1px solid var(--border);}
+  .card-head{padding:calc(22px * var(--scale)) calc(22px * var(--scale)) calc(18px * var(--scale));
+    border-bottom:1px solid var(--border);}
   .head-top{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;}
-  .venue{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:.03em;color:var(--text);}
+  .venue{font-family:'Bebas Neue',sans-serif;font-size:calc(34px * var(--scale));letter-spacing:.03em;
+    color:var(--text);white-space:nowrap;}
   .clock-block{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;}
   .clock-lbl{font-family:'Work Sans',sans-serif;font-size:9px;font-weight:600;letter-spacing:.16em;
     text-transform:uppercase;color:var(--text-dim);}
   .flip-clock{display:flex;align-items:center;gap:3px;}
-  .flip-unit{position:relative;min-width:24px;background:#101014;color:var(--text);
-    font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;text-align:center;
-    padding:7px 3px 6px;border-radius:4px;border:1px solid #050506;
+  .flip-unit{position:relative;min-width:calc(24px * var(--scale));background:#101014;color:var(--text);
+    font-family:'Bebas Neue',sans-serif;font-size:calc(28px * var(--scale));line-height:1;text-align:center;
+    padding:calc(7px * var(--scale)) calc(3px * var(--scale)) calc(6px * var(--scale));border-radius:4px;border:1px solid #050506;
     box-shadow:0 2px 0 rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
     font-variant-numeric:tabular-nums;overflow:hidden;}
   .flip-unit::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;
     background:rgba(0,0,0,.6);transform:translateY(-.5px);}
-  .flip-colon{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text-dim);padding:0 1px;}
-  .subline{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:20px;
+  .flip-colon{font-family:'Bebas Neue',sans-serif;font-size:calc(22px * var(--scale));color:var(--text-dim);padding:0 1px;}
+  .subline{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:calc(20px * var(--scale));
     letter-spacing:.02em;color:var(--gold);margin-top:10px;}
   .stats{display:flex;gap:10px;margin-top:14px;}
   .stat{position:relative;flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:12px;
-    padding:16px 6px 10px;text-align:center;}
-  .stat .lbl{position:absolute;top:8px;left:9px;font-family:'Work Sans',sans-serif;font-size:9px;
+    padding:calc(16px * var(--scale)) calc(6px * var(--scale)) calc(10px * var(--scale));text-align:center;}
+  .stat .lbl{position:absolute;top:calc(8px * var(--scale));left:calc(9px * var(--scale));
+    font-family:'Work Sans',sans-serif;font-size:calc(9px * var(--scale));
     color:var(--text-dim);letter-spacing:.02em;}
-  .stat .num{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;
-    margin-top:10px;}
+  .stat .num{font-family:'Bebas Neue',sans-serif;font-size:calc(26px * var(--scale));line-height:1;
+    font-variant-numeric:tabular-nums;margin-top:calc(10px * var(--scale));}
   .stat.free .num{color:var(--gold);}
   .stat.rental .num{color:var(--red);}
   .stat.open .num{color:var(--green);}
 
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:20px;}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:calc(10px * var(--scale));padding:calc(20px * var(--scale));}
   .table-cell{position:relative;aspect-ratio:1/.8;border-radius:14px;border:1.5px solid transparent;
-    display:flex;align-items:center;justify-content:center;padding:10px;
+    display:flex;align-items:center;justify-content:center;padding:calc(10px * var(--scale));
     cursor:pointer;user-select:none;transition:transform .12s ease;}
   .table-cell:active{transform:scale(.96);}
-  .table-cell .tno{position:absolute;top:9px;left:11px;font-family:'Bebas Neue',sans-serif;
-    font-size:13px;letter-spacing:.02em;color:var(--text-dim);}
-  .table-cell .state{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;font-size:19px;}
+  .table-cell .tno{position:absolute;top:calc(9px * var(--scale));left:calc(11px * var(--scale));
+    font-family:'Bebas Neue',sans-serif;font-size:calc(13px * var(--scale));letter-spacing:.02em;color:var(--text-dim);}
+  .table-cell .state{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;font-size:calc(19px * var(--scale));}
   .table-cell.is-open{background:var(--green-soft);border-color:var(--green);}
   .table-cell.is-open .state{color:var(--green);}
   .table-cell.is-free,.table-cell.is-rental{background:var(--red-soft);border-color:var(--red);}
@@ -140,8 +144,8 @@
 
   <div class="controls">
     <div class="control-row">
-      <label for="widthSlider">カード幅</label>
-      <input type="range" id="widthSlider" min="60" max="100" value="100">
+      <label for="scaleSlider">卓の大きさ</label>
+      <input type="range" id="scaleSlider" min="80" max="130" value="100">
     </div>
     <button class="save-btn" id="saveBtn">画像として保存</button>
     <p class="save-status" id="saveStatus"></p>
@@ -257,11 +261,9 @@
     });
   });
 
-  var slider = document.getElementById('widthSlider');
-  var card = document.getElementById('card');
-  slider.addEventListener('input', function(){
-    card.style.maxWidth = slider.value + '%';
-    card.style.margin = '0 auto';
+  var scaleSlider = document.getElementById('scaleSlider');
+  scaleSlider.addEventListener('input', function(){
+    document.documentElement.style.setProperty('--scale', (scaleSlider.value / 100));
   });
 
   render();
