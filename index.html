@@ -204,13 +204,30 @@
     {name:'通常卓',   states:['open','free','rental'], initial:'open'}
   ];
 
+  // ---- 卓の状態の保持(ページの予期せぬ再読み込み(iOSのタブ再読み込み等)で情報が消えるのを防ぐ) ----
+  var STORAGE_KEY = 'mahjong_nine_table_status_v1';
+  function saveState(){
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        cellStates: cells.map(function(c){ return c.dataset.state; })
+      }));
+    } catch (e) {}
+  }
+  function loadState(){
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  var savedState = loadState();
+
   var grid = document.getElementById('grid');
   var cells = [];
 
   TABLES.forEach(function(t, i){
     var cell = document.createElement('div');
     cell.className = 'table-cell';
-    cell.dataset.state = t.initial;
+    cell.dataset.state = (savedState && savedState.cellStates && savedState.cellStates[i]) || t.initial;
     cell.dataset.states = t.states.join(',');
     cell.innerHTML = '<span class="tno">' + t.name + '</span><span class="state"></span>';
     cell.addEventListener('click', (function(idx){
@@ -220,6 +237,7 @@
         var next = states[(states.indexOf(c.dataset.state) + 1) % states.length];
         c.dataset.state = next;
         render();
+        saveState();
       };
     })(i));
     grid.appendChild(cell);
@@ -269,6 +287,7 @@
   document.getElementById('resetBtn').addEventListener('click', function(){
     cells.forEach(function(c){ c.dataset.state = 'open'; });
     render();
+    saveState();
   });
 
   // ---- コピーしてInstagramを開く(通常版=フレーム全体、オーバーレイ版=背景透過でカードのみ) ----
