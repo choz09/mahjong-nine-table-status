@@ -15,6 +15,7 @@
     --gold:#cdaf6d; --gold-soft:rgba(205,175,109,.14);
     --green:#3fb673; --green-soft:rgba(63,182,115,.14);
     --red:#e0574f; --red-soft:rgba(224,87,79,.14);
+    --amber:#e2a63c; --amber-soft:rgba(226,166,60,.16);
     /* ---- 見た目の固定値(2026-09-10、edit.htmlで確定した数値) ---- */
     --gap:19;
     --cellw:110;
@@ -92,16 +93,38 @@
   .table-cell:active{transform:scale(.96);}
   .table-cell .tno{position:absolute;top:8px;left:10px;font-family:'Bebas Neue',sans-serif;
     font-size:calc(var(--fs-tno) * 1px);letter-spacing:.02em;color:var(--text-dim);}
+  .table-cell .state-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
   .table-cell .state{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;font-size:calc(var(--fs-state) * 1px);}
+  .table-cell .time{font-family:'Work Sans',sans-serif;font-weight:600;font-size:11px;letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;opacity:.85;}
   .table-cell.is-open{background:var(--green-soft);border-color:var(--green);}
   .table-cell.is-open .state{color:var(--green);}
   .table-cell.is-free,.table-cell.is-rental{background:var(--red-soft);border-color:var(--red);}
   .table-cell.is-free .state,.table-cell.is-rental .state{color:var(--red);}
+  .table-cell.is-reserved{background:var(--amber-soft);border-color:var(--amber);}
+  .table-cell.is-reserved .state,.table-cell.is-reserved .time{color:var(--amber);}
 
   .legend{display:flex;justify-content:center;gap:14px;padding:0 18px 16px;flex-wrap:wrap;}
   .legend span{display:flex;align-items:center;gap:5px;font-family:'Work Sans',sans-serif;font-size:10px;color:var(--text-dim);}
   .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
-  .legend .i-open{background:var(--green);} .legend .i-free{background:var(--red);}
+  .legend .i-open{background:var(--green);} .legend .i-free{background:var(--red);} .legend .i-reserved{background:var(--amber);}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;
+    justify-content:center;z-index:100;padding:20px;}
+  .modal-box{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px 20px;
+    width:100%;max-width:280px;}
+  .modal-title{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:14px;color:var(--text);
+    text-align:center;margin-bottom:16px;}
+  .modal-time-inputs{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px;}
+  .modal-time-inputs select{font-family:'Bebas Neue',sans-serif;font-size:22px;background:#101014;
+    color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;}
+  .modal-time-inputs span{color:var(--text-dim);font-family:'Bebas Neue',sans-serif;font-size:20px;}
+  .modal-actions{display:flex;gap:10px;}
+  .modal-btn{flex:1;padding:11px;border-radius:10px;font-family:'Work Sans',sans-serif;font-size:12.5px;
+    font-weight:700;cursor:pointer;border:1px solid var(--border);}
+  .modal-btn-cancel{background:var(--panel-2);color:var(--text-dim);}
+  .modal-btn-confirm{background:var(--amber-soft);border-color:var(--amber);color:var(--amber);}
+  .modal-btn-confirm:hover{background:var(--amber);color:#171008;}
 
   .tel-line{text-align:center;font-family:'Work Sans',sans-serif;font-size:10.5px;letter-spacing:.04em;
     color:var(--text-dim);padding:0 20px 16px;font-variant-numeric:tabular-nums;}
@@ -171,6 +194,7 @@
 
         <div class="legend">
           <span><i class="i-open"></i>空卓</span>
+          <span><i class="i-reserved"></i>予約</span>
           <span><i class="i-free"></i>稼働中(フリー/貸卓はマス内の表記で区別)</span>
         </div>
         <p class="tel-line">ご予約・お問い合わせ <b>TEL 086-289-6081</b></p>
@@ -178,7 +202,22 @@
     </div>
   </div>
 
-  <p class="hint">卓をタップすると状態が切り替わります(空卓 → フリー → 貸卓 → 空卓)。集計と更新時刻は自動で反映されます。</p>
+  <p class="hint">卓をタップすると状態が切り替わります(空卓 → フリー → 貸卓 → 予約 → 空卓)。予約にすると開始時刻を入力できます(予約中の卓はまだ空いているため、集計の「空卓」に含まれます)。集計と更新時刻は自動で反映されます。</p>
+
+  <div class="modal-backdrop" id="timeModalBackdrop" hidden>
+    <div class="modal-box">
+      <p class="modal-title">予約開始時刻</p>
+      <div class="modal-time-inputs">
+        <select id="modalHour"></select>
+        <span>:</span>
+        <select id="modalMinute"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-cancel" id="modalCancelBtn">キャンセル</button>
+        <button class="modal-btn modal-btn-confirm" id="modalConfirmBtn">設定</button>
+      </div>
+    </div>
+  </div>
 
   <div class="controls">
     <button class="save-btn" id="saveBtn">コピーしてInstagramを開く</button>
@@ -193,15 +232,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 (function(){
-  var LABELS = {open:'空卓', free:'フリー', rental:'貸卓使用中'};
-  // 卓ごとの名称・許容する状態(フリー専用卓は貸卓に切り替わらない)・初期状態
+  var LABELS = {open:'空卓', free:'フリー', rental:'貸卓使用中', reserved:'予約'};
+  // 卓ごとの名称・許容する状態(フリー専用卓は貸卓・予約に切り替わらない)・初期状態
   var TABLES = [
-    {name:'フリー卓', states:['open','free'],          initial:'free'},
-    {name:'自動配牌', states:['open','free','rental'], initial:'open'},
-    {name:'通常卓',   states:['open','free','rental'], initial:'free'},
-    {name:'通常卓',   states:['open','free','rental'], initial:'rental'},
-    {name:'通常卓',   states:['open','free','rental'], initial:'open'},
-    {name:'通常卓',   states:['open','free','rental'], initial:'open'}
+    {name:'フリー卓', states:['open','free'],                     initial:'free'},
+    {name:'自動配牌', states:['open','free','rental','reserved'], initial:'open'},
+    {name:'通常卓',   states:['open','free','rental','reserved'], initial:'free'},
+    {name:'通常卓',   states:['open','free','rental','reserved'], initial:'rental'},
+    {name:'通常卓',   states:['open','free','rental','reserved'], initial:'open'},
+    {name:'通常卓',   states:['open','free','rental','reserved'], initial:'open'}
   ];
 
   // ---- 卓の状態の保持(ページの予期せぬ再読み込み(iOSのタブ再読み込み等)で情報が消えるのを防ぐ) ----
@@ -209,7 +248,8 @@
   function saveState(){
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        cellStates: cells.map(function(c){ return c.dataset.state; })
+        cellStates: cells.map(function(c){ return c.dataset.state; }),
+        cellTimes: cells.map(function(c){ return c.dataset.reservedTime || ''; })
       }));
     } catch (e) {}
   }
@@ -228,16 +268,41 @@
     var cell = document.createElement('div');
     cell.className = 'table-cell';
     cell.dataset.state = (savedState && savedState.cellStates && savedState.cellStates[i]) || t.initial;
+    cell.dataset.reservedTime = (savedState && savedState.cellTimes && savedState.cellTimes[i]) || '';
     cell.dataset.states = t.states.join(',');
-    cell.innerHTML = '<span class="tno">' + t.name + '</span><span class="state"></span>';
+    cell.innerHTML = '<span class="tno">' + t.name + '</span>' +
+      '<span class="state-wrap"><span class="state"></span><span class="time" hidden></span></span>';
     cell.addEventListener('click', (function(idx){
       return function(){
         var c = cells[idx];
         var states = c.dataset.states.split(',');
         var next = states[(states.indexOf(c.dataset.state) + 1) % states.length];
+        if (next === 'reserved') {
+          openTimeModal(function(time){
+            if (!time) return;
+            c.dataset.state = next;
+            c.dataset.reservedTime = time;
+            render();
+            saveState();
+          });
+          return;
+        }
         c.dataset.state = next;
         render();
         saveState();
+      };
+    })(i));
+    cell.querySelector('.time').addEventListener('click', (function(idx){
+      return function(e){
+        e.stopPropagation();
+        var c = cells[idx];
+        if (c.dataset.state !== 'reserved') return;
+        openTimeModal(function(time){
+          if (!time) return;
+          c.dataset.reservedTime = time;
+          render();
+          saveState();
+        });
       };
     })(i));
     grid.appendChild(cell);
@@ -248,10 +313,18 @@
     var free = 0, rental = 0, open = 0;
     cells.forEach(function(c){
       var s = c.dataset.state;
-      c.classList.remove('is-open','is-free','is-rental');
+      c.classList.remove('is-open','is-free','is-rental','is-reserved');
       c.classList.add('is-' + s);
       c.querySelector('.state').textContent = LABELS[s];
-      if (s === 'open') open++;
+      var timeEl = c.querySelector('.time');
+      if (s === 'reserved') {
+        timeEl.textContent = c.dataset.reservedTime + '〜';
+        timeEl.hidden = false;
+      } else {
+        timeEl.hidden = true;
+      }
+      // 予約は開始前でまだ卓は空いているため、集計上は空卓として数える
+      if (s === 'open' || s === 'reserved') open++;
       if (s === 'free') free++;
       if (s === 'rental') rental++;
     });
@@ -259,6 +332,48 @@
     document.getElementById('statRental').textContent = rental;
     document.getElementById('statOpen').textContent = open;
   }
+
+  // ---- 予約開始時刻の入力モーダル ----
+  var modalBackdrop = document.getElementById('timeModalBackdrop');
+  var modalHour = document.getElementById('modalHour');
+  var modalMinute = document.getElementById('modalMinute');
+  var modalCallback = null;
+
+  for (var h = 0; h < 24; h++){
+    var hOpt = document.createElement('option');
+    hOpt.value = String(h).padStart(2, '0');
+    hOpt.textContent = String(h).padStart(2, '0');
+    modalHour.appendChild(hOpt);
+  }
+  for (var m = 0; m < 60; m += 5){
+    var mOpt = document.createElement('option');
+    mOpt.value = String(m).padStart(2, '0');
+    mOpt.textContent = String(m).padStart(2, '0');
+    modalMinute.appendChild(mOpt);
+  }
+
+  function openTimeModal(callback){
+    var now = new Date();
+    modalHour.value = String(now.getHours()).padStart(2, '0');
+    modalMinute.value = String(Math.round(now.getMinutes() / 5) * 5 % 60).padStart(2, '0');
+    modalCallback = callback;
+    modalBackdrop.hidden = false;
+  }
+  function closeTimeModal(result){
+    modalBackdrop.hidden = true;
+    var cb = modalCallback;
+    modalCallback = null;
+    if (cb) cb(result);
+  }
+  document.getElementById('modalConfirmBtn').addEventListener('click', function(){
+    closeTimeModal(modalHour.value + ':' + modalMinute.value);
+  });
+  document.getElementById('modalCancelBtn').addEventListener('click', function(){
+    closeTimeModal(null);
+  });
+  modalBackdrop.addEventListener('click', function(e){
+    if (e.target === modalBackdrop) closeTimeModal(null);
+  });
 
   function tick(){
     var d = new Date();
@@ -285,7 +400,7 @@
   }
 
   document.getElementById('resetBtn').addEventListener('click', function(){
-    cells.forEach(function(c){ c.dataset.state = 'open'; });
+    cells.forEach(function(c){ c.dataset.state = 'open'; c.dataset.reservedTime = ''; });
     render();
     saveState();
   });
