@@ -89,7 +89,8 @@
   .table-cell{position:relative;width:calc(var(--cellw) * 1px);height:calc(var(--cellw) * .8px);
     border-radius:14px;border:1.5px solid transparent;
     display:flex;align-items:center;justify-content:center;padding:9px;
-    cursor:pointer;user-select:none;transition:transform .12s ease;}
+    cursor:pointer;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
+    transition:transform .12s ease;}
   .table-cell:active{transform:scale(.96);}
   .table-cell .tno{position:absolute;top:8px;left:10px;font-family:'Bebas Neue',sans-serif;
     font-size:calc(var(--fs-tno) * 1px);letter-spacing:.02em;color:var(--text-dim);}
@@ -202,7 +203,7 @@
     </div>
   </div>
 
-  <p class="hint">卓をタップすると状態が切り替わります(空卓 → フリー → 貸卓 → 予約 → 空卓)。予約にすると開始時刻を入力できます(予約中の卓はまだ空いているため、集計の「空卓」に含まれます)。集計と更新時刻は自動で反映されます。</p>
+  <p class="hint">卓をタップすると状態が切り替わります(空卓 → フリー → 貸卓 → 空卓)。予約を入れるには卓を長押しして開始時刻を設定してください(予約中の卓はまだ空いているため、集計の「空卓」に含まれます)。予約中の卓をタップすると予約を解除して空卓に戻ります。集計と更新時刻は自動で反映されます。</p>
 
   <div class="modal-backdrop" id="timeModalBackdrop" hidden>
     <div class="modal-box">
@@ -233,15 +234,18 @@
 <script>
 (function(){
   var LABELS = {open:'空卓', free:'フリー', rental:'貸卓使用中', reserved:'予約'};
-  // 卓ごとの名称・許容する状態(フリー専用卓は貸卓・予約に切り替わらない)・初期状態
+  // 卓ごとの名称・許容する状態(フリー専用卓は貸卓に切り替わらない)・初期状態
+  // 予約はタップサイクルに含めない(長押しで発動する別動作のため)
   var TABLES = [
-    {name:'フリー卓', states:['open','free'],                     initial:'free'},
-    {name:'自動配牌', states:['open','free','rental','reserved'], initial:'open'},
-    {name:'通常卓',   states:['open','free','rental','reserved'], initial:'free'},
-    {name:'通常卓',   states:['open','free','rental','reserved'], initial:'rental'},
-    {name:'通常卓',   states:['open','free','rental','reserved'], initial:'open'},
-    {name:'通常卓',   states:['open','free','rental','reserved'], initial:'open'}
+    {name:'フリー卓', states:['open','free'],          initial:'free'},
+    {name:'自動配牌', states:['open','free','rental'], initial:'open'},
+    {name:'通常卓',   states:['open','free','rental'], initial:'free'},
+    {name:'通常卓',   states:['open','free','rental'], initial:'rental'},
+    {name:'通常卓',   states:['open','free','rental'], initial:'open'},
+    {name:'通常卓',   states:['open','free','rental'], initial:'open'}
   ];
+  var LONG_PRESS_MS = 550;
+  var LONG_PRESS_MOVE_TOLERANCE = 10;
 
   // ---- 卓の状態の保持(ページの予期せぬ再読み込み(iOSのタブ再読み込み等)で情報が消えるのを防ぐ) ----
   var STORAGE_KEY = 'mahjong_nine_table_status_v1';
@@ -272,37 +276,59 @@
     cell.dataset.states = t.states.join(',');
     cell.innerHTML = '<span class="tno">' + t.name + '</span>' +
       '<span class="state-wrap"><span class="state"></span><span class="time" hidden></span></span>';
-    cell.addEventListener('click', (function(idx){
-      return function(){
-        var c = cells[idx];
-        var states = c.dataset.states.split(',');
-        var next = states[(states.indexOf(c.dataset.state) + 1) % states.length];
-        if (next === 'reserved') {
-          openTimeModal(function(time){
+
+    // ---- タップ = 通常のサイクル(空卓/フリー/貸卓)。予約は長押しで別途発動 ----
+    var pressTimer = null;
+    var pressStartX = 0, pressStartY = 0;
+    var longPressFired = false;
+
+    function clearPressTimer(){
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    }
+
+    cell.addEventListener('pointerdown', (function(idx){
+      return function(e){
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        longPressFired = false;
+        pressStartX = e.clientX;
+        pressStartY = e.clientY;
+        clearPressTimer();
+        pressTimer = setTimeout(function(){
+          pressTimer = null;
+          longPressFired = true;
+          var c = cells[idx];
+          openTimeModal(c.dataset.state === 'reserved' ? c.dataset.reservedTime : null, function(time){
             if (!time) return;
-            c.dataset.state = next;
+            c.dataset.state = 'reserved';
             c.dataset.reservedTime = time;
             render();
             saveState();
           });
-          return;
-        }
+        }, LONG_PRESS_MS);
+      };
+    })(i));
+    cell.addEventListener('pointermove', function(e){
+      if (!pressTimer) return;
+      if (Math.abs(e.clientX - pressStartX) > LONG_PRESS_MOVE_TOLERANCE ||
+          Math.abs(e.clientY - pressStartY) > LONG_PRESS_MOVE_TOLERANCE) {
+        clearPressTimer();
+      }
+    });
+    cell.addEventListener('pointerup', clearPressTimer);
+    cell.addEventListener('pointercancel', clearPressTimer);
+    cell.addEventListener('pointerleave', clearPressTimer);
+    cell.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+    cell.addEventListener('click', (function(idx){
+      return function(){
+        if (longPressFired) { longPressFired = false; return; }
+        var c = cells[idx];
+        var states = c.dataset.states.split(',');
+        // reserved状態はタップサイクルに無いため、indexOf(-1)+1=0でstates[0](空卓)に戻る
+        var next = states[(states.indexOf(c.dataset.state) + 1) % states.length];
         c.dataset.state = next;
         render();
         saveState();
-      };
-    })(i));
-    cell.querySelector('.time').addEventListener('click', (function(idx){
-      return function(e){
-        e.stopPropagation();
-        var c = cells[idx];
-        if (c.dataset.state !== 'reserved') return;
-        openTimeModal(function(time){
-          if (!time) return;
-          c.dataset.reservedTime = time;
-          render();
-          saveState();
-        });
       };
     })(i));
     grid.appendChild(cell);
@@ -352,10 +378,16 @@
     modalMinute.appendChild(mOpt);
   }
 
-  function openTimeModal(callback){
-    var now = new Date();
-    modalHour.value = String(now.getHours()).padStart(2, '0');
-    modalMinute.value = String(Math.round(now.getMinutes() / 5) * 5 % 60).padStart(2, '0');
+  function openTimeModal(prefill, callback){
+    if (prefill) {
+      var parts = prefill.split(':');
+      modalHour.value = parts[0];
+      modalMinute.value = parts[1];
+    } else {
+      var now = new Date();
+      modalHour.value = String(now.getHours()).padStart(2, '0');
+      modalMinute.value = String(Math.round(now.getMinutes() / 5) * 5 % 60).padStart(2, '0');
+    }
     modalCallback = callback;
     modalBackdrop.hidden = false;
   }
