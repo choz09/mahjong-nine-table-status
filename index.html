@@ -80,9 +80,18 @@
     color:var(--text-dim);letter-spacing:.02em;}
   .stat .num{font-family:'Bebas Neue',sans-serif;font-size:calc(var(--fs-statnum) * 1px);line-height:1;
     font-variant-numeric:tabular-nums;margin-top:9px;}
-  .stat.free .num{color:var(--gold);}
+  .stat.free .num{color:var(--red);}
   .stat.rental .num{color:var(--red);}
   .stat.open .num{color:var(--green);}
+  .stat.reserved .num{color:var(--amber);}
+  /* 予約が入って4列になったときは、幅が狭くなる分だけ隙間と左右の余白を詰めて数字の大きさを保つ */
+  .stats.is-four{gap:6px;}
+  .stats.is-four .stat{padding-left:3px;padding-right:3px;}
+  .stats.is-four .stat .lbl{left:6px;font-size:10px;}
+  /* ラベルは通常「フリー稼働」「貸卓使用中」。4列のときだけ短縮形に切り替える */
+  .lbl .short{display:none;}
+  .stats.is-four .lbl .long{display:none;}
+  .stats.is-four .lbl .short{display:inline;}
 
   .grid{display:grid;grid-template-columns:repeat(2, calc(var(--cellw) * 1px));justify-content:center;
     gap:calc(var(--gap) * 1px);padding:18px;}
@@ -221,9 +230,10 @@
             </div>
           </div>
           <p class="subline">【 現在の卓状況 】</p>
-          <div class="stats">
-            <div class="stat free"><p class="lbl">フリー稼働</p><p class="num" id="statFree">0</p></div>
-            <div class="stat rental"><p class="lbl">貸卓使用中</p><p class="num" id="statRental">0</p></div>
+          <div class="stats" id="stats">
+            <div class="stat free"><p class="lbl"><span class="long">フリー稼働</span><span class="short">フリー</span></p><p class="num" id="statFree">0</p></div>
+            <div class="stat rental"><p class="lbl"><span class="long">貸卓使用中</span><span class="short">貸卓</span></p><p class="num" id="statRental">0</p></div>
+            <div class="stat reserved" id="statReservedBox" hidden><p class="lbl">予約</p><p class="num" id="statReserved">0</p></div>
             <div class="stat open"><p class="lbl">空卓</p><p class="num" id="statOpen">0</p></div>
           </div>
         </div>
@@ -240,7 +250,7 @@
     </div>
   </div>
 
-  <p class="hint">卓をタップすると状態が切り替わります(空卓 → フリー → 貸卓 → 空卓)。予約を入れるには卓を長押しして開始時刻を設定してください(予約中の卓はまだ空いているため、集計の「空卓」に含まれます)。予約中の卓をタップすると予約を解除して空卓に戻ります。集計と更新時刻は自動で反映されます。</p>
+  <p class="hint">卓をタップすると状態が切り替わります(空卓 → フリー → 貸卓 → 空卓)。予約を入れるには卓を長押しして開始時刻を設定してください(予約中の卓は集計の「空卓」に含まれず、「予約」として別に数えます。予約が0件のときは「予約」の枠は出ません)。予約中の卓をタップすると予約を解除して空卓に戻ります。集計と更新時刻は自動で反映されます。</p>
 
   <div class="modal-backdrop" id="timeModalBackdrop" hidden>
     <div class="modal-box">
@@ -389,7 +399,7 @@
   });
 
   function render(){
-    var free = 0, rental = 0, open = 0;
+    var free = 0, rental = 0, open = 0, reserved = 0;
     cells.forEach(function(c){
       var s = c.dataset.state;
       c.classList.remove('is-open','is-free','is-rental','is-reserved');
@@ -402,14 +412,19 @@
       } else {
         timeEl.hidden = true;
       }
-      // 予約は開始前でまだ卓は空いているため、集計上は空卓として数える
-      if (s === 'open' || s === 'reserved') open++;
+      // 予約は空卓に含めず別枠で数える(空卓+予約+稼働中=全卓数になり、緑のマスの数と空卓の数字が一致する)
+      if (s === 'open') open++;
+      if (s === 'reserved') reserved++;
       if (s === 'free') free++;
       if (s === 'rental') rental++;
     });
     setNum(document.getElementById('statFree'), free);
     setNum(document.getElementById('statRental'), rental);
+    setNum(document.getElementById('statReserved'), reserved);
     setNum(document.getElementById('statOpen'), open);
+    // 予約が0件のときは枠ごと隠して3列に戻す
+    document.getElementById('statReservedBox').hidden = reserved === 0;
+    document.getElementById('stats').classList.toggle('is-four', reserved > 0);
   }
 
   // ---- 予約開始時刻の入力モーダル ----
