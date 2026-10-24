@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no">
 <title>麻雀ナイン 空卓ステータス</title>
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
@@ -11,21 +12,21 @@
 <style>
   :root{
     --bg:#0c0c10; --panel:#17171d; --panel-2:#1e1e26; --border:#2b2b34;
-    --text:#f2ede1; --text-dim:#9d968a;
-    --gold:#cdaf6d; --gold-soft:rgba(205,175,109,.14);
-    --green:#3fb673; --green-soft:rgba(63,182,115,.14);
-    --red:#e0574f; --red-soft:rgba(224,87,79,.14);
-    --amber:#e2a63c; --amber-soft:rgba(226,166,60,.16);
+    --text:#f2ede1; --text-dim:#9d968a; --text-sub:#c9c9cf;
+    --gold:#e2c070; --gold-soft:rgba(226,192,112,.14);
+    --green:#5fcf8a; --green-soft:rgba(95,207,138,.12);
+    --red:#ff7a70; --red-soft:rgba(255,122,112,.30);
+    --amber:#f2c14e; --amber-soft:rgba(242,193,78,.20);
     /* ---- 見た目の固定値(2026-09-10、edit.htmlで確定した数値) ---- */
     --gap:19;
-    --cellw:110;
+    --cellw:129;
     --voffset:0;
     --fs-venue:25;
-    --fs-clock:24;
+    --fs-clock:20;
     --fs-heading:17;
-    --fs-statnum:22;
-    --fs-statlbl:8;
-    --fs-tno:10;
+    --fs-statnum:28;
+    --fs-statlbl:11;
+    --fs-tno:11;
     --fs-state:16;
   }
   *{box-sizing:border-box;}
@@ -54,14 +55,14 @@
 
   #card{width:320px;margin:0 auto;transform:translateY(calc(var(--voffset) * 1px));
     background:var(--panel);border:1px solid var(--border);border-radius:20px;overflow:hidden;}
-  #frame.frame-overlay-active #card{background:rgba(23,23,29,.6);}
+  #frame.frame-overlay-active #card{background:rgba(17,17,22,.84);}
   .card-head{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
   .head-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;}
   .venue{font-family:'Bebas Neue',sans-serif;font-size:calc(var(--fs-venue) * 1px);letter-spacing:.03em;
     color:var(--text);white-space:nowrap;}
   .clock-block{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;}
-  .clock-lbl{font-family:'Work Sans',sans-serif;font-size:8px;font-weight:600;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--text-dim);}
+  .clock-lbl{font-family:'Work Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--text-sub);}
   .flip-clock{display:flex;align-items:center;gap:2px;}
   .flip-unit{position:relative;min-width:calc(var(--fs-clock) * .85px);background:#101014;color:var(--text);
     font-family:'Bebas Neue',sans-serif;font-size:calc(var(--fs-clock) * 1px);line-height:1;text-align:center;
@@ -74,20 +75,18 @@
   .subline{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:calc(var(--fs-heading) * 1px);
     letter-spacing:.02em;color:var(--gold);margin-top:9px;}
   .stats{display:flex;gap:8px;margin-top:12px;}
-  .stat{position:relative;flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:12px;
-    padding:14px 5px 9px;text-align:center;}
-  .stat .lbl{position:absolute;top:7px;left:8px;font-family:'Work Sans',sans-serif;font-size:calc(var(--fs-statlbl) * 1px);
-    color:var(--text-dim);letter-spacing:.02em;}
+  .stat{flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:12px;
+    padding:9px 3px 8px;text-align:center;}
+  .stat .lbl{font-family:'Work Sans',sans-serif;font-size:calc(var(--fs-statlbl) * 1px);
+    color:var(--text-sub);letter-spacing:.02em;white-space:nowrap;}
   .stat .num{font-family:'Bebas Neue',sans-serif;font-size:calc(var(--fs-statnum) * 1px);line-height:1;
-    font-variant-numeric:tabular-nums;margin-top:9px;}
+    font-variant-numeric:tabular-nums;margin-top:5px;}
   .stat.free .num{color:var(--red);}
   .stat.rental .num{color:var(--red);}
   .stat.open .num{color:var(--green);}
   .stat.reserved .num{color:var(--amber);}
   /* 予約が入って4列になったときは、幅が狭くなる分だけ隙間と左右の余白を詰めて数字の大きさを保つ */
   .stats.is-four{gap:6px;}
-  .stats.is-four .stat{padding-left:3px;padding-right:3px;}
-  .stats.is-four .stat .lbl{left:6px;font-size:10px;}
   /* ラベルは通常「フリー稼働」「貸卓使用中」。4列のときだけ短縮形に切り替える */
   .lbl .short{display:none;}
   .stats.is-four .lbl .long{display:none;}
@@ -95,28 +94,30 @@
 
   .grid{display:grid;grid-template-columns:repeat(2, calc(var(--cellw) * 1px));justify-content:center;
     gap:calc(var(--gap) * 1px);padding:18px;}
-  .table-cell{position:relative;width:calc(var(--cellw) * 1px);height:calc(var(--cellw) * .8px);
-    border-radius:14px;border:1.5px solid transparent;
+  .table-cell{position:relative;width:calc(var(--cellw) * 1px);height:calc(var(--cellw) * .68px);
+    border-radius:14px;border:2px solid transparent;
     display:flex;align-items:center;justify-content:center;padding:9px;
     cursor:pointer;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
     transition:transform .12s ease;}
   .table-cell:active{transform:scale(.96);}
   .table-cell .tno{position:absolute;top:8px;left:10px;font-family:'Bebas Neue',sans-serif;
-    font-size:calc(var(--fs-tno) * 1px);letter-spacing:.02em;color:var(--text-dim);}
+    font-size:calc(var(--fs-tno) * 1px);letter-spacing:.02em;color:var(--text-sub);}
   .table-cell .state-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
   .table-cell .state{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;font-size:calc(var(--fs-state) * 1px);}
-  .table-cell .time{font-family:'Work Sans',sans-serif;font-weight:600;font-size:11px;letter-spacing:.02em;
-    font-variant-numeric:tabular-nums;opacity:.85;}
-  .table-cell.is-open{background:var(--green-soft);border-color:var(--green);}
+  .table-cell .time{font-family:'Work Sans',sans-serif;font-weight:700;font-size:17px;line-height:1.1;letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;}
+  .table-cell.is-open{background:linear-gradient(var(--green-soft),var(--green-soft)),rgba(18,22,24,.78);border-color:var(--green);}
   .table-cell.is-open .state{color:var(--green);}
-  .table-cell.is-free,.table-cell.is-rental{background:var(--red-soft);border-color:var(--red);}
+  .table-cell.is-free,.table-cell.is-rental{background:linear-gradient(var(--red-soft),var(--red-soft)),rgba(18,22,24,.78);border-color:var(--red);}
   .table-cell.is-free .state,.table-cell.is-rental .state{color:var(--red);}
-  .table-cell.is-reserved{background:var(--amber-soft);border-color:var(--amber);}
+  .table-cell.is-reserved{background:linear-gradient(var(--amber-soft),var(--amber-soft)),rgba(18,22,24,.78);border-color:var(--amber);}
   .table-cell.is-reserved .state,.table-cell.is-reserved .time{color:var(--amber);}
+  .table-cell.is-reserved{padding-top:20px;}
+  .table-cell.is-reserved .state{font-size:calc(var(--fs-state) * 1px - 3px);line-height:1.2;}
 
-  .legend{display:flex;justify-content:center;gap:14px;padding:0 18px 16px;flex-wrap:wrap;}
-  .legend span{display:flex;align-items:center;gap:5px;font-family:'Work Sans',sans-serif;font-size:10px;color:var(--text-dim);}
-  .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .legend{display:flex;justify-content:center;gap:14px;padding:0 18px 12px;flex-wrap:nowrap;}
+  .legend span{display:flex;align-items:center;gap:5px;font-family:'Work Sans',sans-serif;font-size:12px;color:var(--text-sub);white-space:nowrap;}
+  .legend i{width:12px;height:12px;border-radius:50%;display:inline-block;}
   .legend .i-open{background:var(--green);} .legend .i-free{background:var(--red);} .legend .i-reserved{background:var(--amber);}
 
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;
@@ -136,9 +137,10 @@
   .modal-btn-confirm{background:var(--amber-soft);border-color:var(--amber);color:var(--amber);}
   .modal-btn-confirm:hover{background:var(--amber);color:#171008;}
 
-  .tel-line{text-align:center;font-family:'Work Sans',sans-serif;font-size:10.5px;letter-spacing:.04em;
-    color:var(--text-dim);padding:0 20px 16px;font-variant-numeric:tabular-nums;}
-  .tel-line b{color:var(--gold);font-weight:600;}
+  .tel-line{text-align:center;font-family:'Work Sans',sans-serif;font-size:12px;letter-spacing:.02em;white-space:nowrap;
+    color:var(--text-sub);padding:0 12px 18px;font-variant-numeric:tabular-nums;}
+  .tel-line b{color:var(--gold);font-weight:700;font-size:14px;}
+  .tel-line a{color:inherit;text-decoration:none;}
 
   .hint{text-align:center;font-family:'Work Sans',sans-serif;font-size:11px;color:var(--text-dim);
     margin-top:16px;line-height:1.6;}
@@ -243,7 +245,7 @@
         <div class="legend">
           <span><i class="i-open"></i>空卓</span>
           <span><i class="i-reserved"></i>予約</span>
-          <span><i class="i-free"></i>稼働中(フリー/貸卓はマス内の表記で区別)</span>
+          <span><i class="i-free"></i>稼働中</span>
         </div>
         <p class="tel-line">ご予約・お問い合わせ <b>TEL 086-289-6081</b></p>
       </div>
@@ -280,7 +282,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 (function(){
-  var LABELS = {open:'空卓', free:'フリー', rental:'貸卓使用中', reserved:'予約'};
+  var LABELS = {open:'空卓', free:'フリー稼働中', rental:'貸卓使用中', reserved:'予約'};
   // 卓ごとの名称・許容する状態(フリー専用卓は貸卓に切り替わらない)・初期状態
   // 予約はタップサイクルに含めない(長押しで発動する別動作のため)
   var TABLES = [
